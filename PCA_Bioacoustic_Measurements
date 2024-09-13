@@ -1,0 +1,61 @@
+# Load the CSV file into a data frame
+df <- read.csv("Paste/Enter your Working Directory here and run the code")
+
+# Display the first few rows to inspect the data
+head(df)
+
+df$Begin.File <- substr(df$Begin.File,6,8)
+
+# Specify the columns you want to keep for PCA (either by column names or indices)
+# For example, selecting by column indices:
+selected_columns <- c(7, 16, 17, 18, 19, 22, 24, 27)  # Replace with actual column indices or use column names
+
+# Filter the data frame to keep only these columns
+df_filtered <- df[, selected_columns]
+
+# Make sure the data is numeric (PCA requires numeric data)
+# Convert if necessary
+df_filtered <- data.frame(lapply(df_filtered, as.numeric))
+
+# Standardize the data (PCA is affected by scale, so we scale the variables to have mean = 0 and standard deviation = 1)
+df_scaled <- scale(df_filtered)
+
+# Perform PCA
+pca_result <- prcomp(df_scaled, center = TRUE, scale. = TRUE)
+
+# Summary of the PCA result (to see variance explained by each principal component)
+summary(pca_result)
+
+# View the rotation (eigenvectors) to see how much each variable contributes to each principal component
+pca_result$rotation
+
+# Scree plot to visualize the proportion of variance explained by each component
+screeplot(pca_result, type = "lines", main = "Scree Plot")
+
+# Get the PCA-transformed data (principal components)
+pca_data <- pca_result$x
+
+# Let's assume we want to use the first 2 or 3 principal components for K-means
+# Select the first 2 principal components
+pca_data_reduced <- pca_data[, 1:2]  # Use PC1 and PC2 (first two principal components)
+
+# Perform K-means clustering (set k to the desired number of clusters, e.g., 3)
+set.seed(123)  # For reproducibility
+kmeans_result <- kmeans(pca_data_reduced, centers = 7, nstart = 25)
+
+# Add the cluster assignments and label column to the PCA data
+pca_data_with_clusters <- as.data.frame(pca_data_reduced)
+pca_data_with_clusters$cluster <- kmeans_result$cluster
+label_column <- df[,35]
+pca_data_with_clusters$label <- label_column  # Add the label from the 9th column
+
+# Visualize the clusters with the labels
+library(ggplot2)
+ggplot(pca_data_with_clusters, aes(x = PC1, y = PC2, color = factor(label_column))) +
+  geom_point(size = 3) +
+  theme_minimal() +
+  labs(title = "K-means Clustering on PCA Results with Labels", x = "Principal Component 1", y = "Principal Component 2", color = "Cluster")
+
+# Loadings plot to visualize the relationship between variables and principal components
+library(ggplot2)
+pca_var <- pca_result$x  # Principal components
